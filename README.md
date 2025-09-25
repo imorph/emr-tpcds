@@ -1,6 +1,6 @@
-# EMR TPC-DS Benchmarking Framework
+# EMR TPC-DS Benchmarking Toolkit
 
-An automated framework for running Apache Spark TPC-DS performance benchmarks on Amazon EMR with different JVM runtimes. This project allows you to compare performance between Azul Zing, Azul Zulu, and Amazon Corretto JVMs using standardized TPC-DS workloads.
+An automated toolkit for running Apache Spark TPC-DS performance benchmarks on Amazon EMR with different JVM runtimes. This project allows you to compare performance between Azul Zing, Azul Zulu, and Amazon Corretto JVMs using standardized TPC-DS workloads.
 
 ## Features
 
