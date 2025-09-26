@@ -327,6 +327,7 @@ export JOBS=8              # Max concurrent connections
    - Uses concurrent garbage collection
    - Custom JVM options in `CURR_OPT_CONF`
    - Automatic heap management
+   - Follow instructions on how to train ReadyNow from [here](https://docs.azul.com/prime/Use-ReadyNow-Training)
 
 2. **Azul Zulu**:
    - OpenJDK-based with performance improvements
@@ -352,4 +353,14 @@ SPARK_EXECUTOR_INSTANCES="11"         # Total executors
 # Network and reliability
 SPARK_NETWORK_TIMEOUT="300s"          # Network timeout
 SPARK_EXECUTOR_HEARTBEAT_INTERVAL="10s"  # Heartbeat frequency
+```
+
+Following config included by default for all JVMs in `main.tf`:
+
+```yaml
+# With IDs in names -> new classes per batch -> less profile reuse, extra code-cache churn. Without IDs -> same generated class reused -> profiles and compiled methods persist lower steady-state latency
+spark.sql.codegen.useIdInClassName: false
+
+# The global cache of generated classes defaults to 100 entries once you exceed that, Spark evicts and recompiles classes, wasting CPU and lengthening query latency
+spark.sql.codegen.cache.maxEntries: 9999
 ```
