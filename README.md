@@ -46,6 +46,18 @@ An automated toolkit for running Apache Spark TPC-DS performance benchmarks on A
    sudo yum install jq      # CentOS/RHEL
    ```
 
+4. **uv** (for Python dependency management and script execution)
+   ```bash
+   # macOS and Linux
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+
+   # Or with pip
+   pip install uv
+
+   # Or with Homebrew (macOS)
+   brew install uv
+   ```
+
 ### AWS Prerequisites
 
 1. **AWS Account**: With appropriate permissions for EMR, EC2, VPC, and S3
@@ -365,7 +377,7 @@ spark.sql.codegen.useIdInClassName: false
 spark.sql.codegen.cache.maxEntries: 9999
 ```
 
-## Evaluating results
+## Evaluating Results
 
 For evaluating results, we will use the data from Spark Event Logs. If `spark.eventLog.dir` is not set, to get AWS EMR Spark Event Logs:
 
@@ -373,34 +385,88 @@ For evaluating results, we will use the data from Spark Event Logs. If `spark.ev
 2. Start the Spark History UI by clicking on `Spark History Server`.
 3. Wait for the Spark History UI to open, and wait until the Spark Event Logs from the benchmark runs are available (check by refreshing the page), and download them as `.zip` files.
 
-For each event log (JSON, optionally in `.zip` or `.gz`), convert it to more lightweight aggregated CSV:
+### Analysis Tools
+
+This repository includes two Python analysis scripts:
+
+- **`spark_eventlog_analyze.py`**: Converts Spark event logs to aggregated CSV format with per-query metrics
+- **`tpcds_eventlog_compare.py`**: Compares two configurations and generates comparison CSV and S-curve plots
+
+#### Dependencies
+
+The analysis scripts require Python 3.13+ with the following packages:
+- `polars` - for efficient data processing
+- `matplotlib` - for visualization
+
+**Using uv (recommended)**:
+
+All Python scripts in this repository can be run using `uv`, which automatically manages dependencies without needing a virtual environment:
 
 ```bash
-python spark_eventlog_analyze.py -o zing-1.csv /path/to/eventLogs-application_1758748016442_0001-1.zip
-python spark_eventlog_analyze.py -o zing-2.csv /path/to/eventLogs-application_1758748016442_0002-1.zip
-[...]
-python spark_eventlog_analyze.py -o correto-1.csv /path/to/eventLogs-application_1756681602934_0001-1.zip
-[...]
+# Run directly with uv - dependencies are automatically handled
+uv run spark_eventlog_analyze.py -o zing-1.csv /path/to/eventLogs-application_1758748016442_0001-1.zip
+uv run tpcds_eventlog_compare.py -o results corretto-*.csv zing-*.csv
 ```
 
-Then compare the converted event logs of two configurations, e.g.:
+**Alternative: Traditional Python environment**:
 
 ```bash
-python tpcds_eventlog_compare.py -o results correto-*.csv zing-*.csv
+# Create virtual environment and install dependencies
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install polars matplotlib
+
+# Run scripts
+python spark_eventlog_analyze.py -o zing-1.csv /path/to/eventlog.zip
+python tpcds_eventlog_compare.py -o results corretto-*.csv zing-*.csv
 ```
 
-Configuration names (e.g. corretto, zing) as well as run sequence numbers are implicitly derived from CSV file names. The first named configuration is taken as baseline.
+### Step 1: Convert Event Logs to CSV
 
-The result folder will look something like this:
+For each event log (JSON, optionally in `.zip` or `.gz`), convert it to a more lightweight aggregated CSV:
+
+```bash
+uv run spark_eventlog_analyze.py -o zing-1.csv /path/to/eventLogs-application_1758748016442_0001-1.zip
+uv run spark_eventlog_analyze.py -o zing-2.csv /path/to/eventLogs-application_1758748016442_0002-1.zip
+# ... repeat for additional runs
+
+uv run spark_eventlog_analyze.py -o corretto-1.csv /path/to/eventLogs-application_1756681602934_0001-1.zip
+uv run spark_eventlog_analyze.py -o corretto-2.csv /path/to/eventLogs-application_1756681602934_0002-1.zip
+# ... repeat for additional runs
+```
+
+**Output CSV columns**: `executionId`, `description`, `num_jobs`, `num_tasks`, `makespan_ms`, `task_slot_ms`, `executor_run_ms`, `executor_cpu_ms`, `cpu_vs_wall_pct`, `deserialize_ms`, `result_serialize_ms`, `gc_ms`, `shuffle_fetch_wait_ms`, `shuffle_write_time_ms`, `input_bytes`, `output_bytes`, `shuffle_read_bytes`, `shuffle_write_bytes`
+
+### Step 2: Compare Configurations
+
+Compare the converted event logs of two configurations:
+
+```bash
+uv run tpcds_eventlog_compare.py -o results corretto-*.csv zing-*.csv
+```
+
+**Important**:
+- Configuration names (e.g. `corretto`, `zing`) and run sequence numbers are implicitly derived from CSV file names in the format `{config}-{run}.csv`
+- The first named configuration is taken as baseline
+- Multiple runs of the same configuration are automatically aggregated by taking the mean
+
+**Optional filters**:
+```bash
+# Only consider queries where target runs longer than 60 seconds
+uv run tpcds_eventlog_compare.py -o results --longer-than 60 corretto-*.csv zing-*.csv
+```
+
+### Output
+
+The result folder will contain:
 
 ```
-results
-├── zing-vs-correto.csv
-└── zing-vs-correto-total_time.png
+results/
+├── zing-vs-corretto.csv
+└── zing-vs-corretto-total_time.png
 ```
 
-The PNG file is S-curve comparison of the the `total_time` metric (time to complete each query).
+- **PNG file**: S-curve comparison of the `total_time` metric (wall clock time to complete each query), sorted by speedup ratio
+- **CSV schema**: `query`, `total_time_corretto`, `total_time_zing`, `executor_time_corretto`, `executor_time_zing`, `executor_cpu_time_corretto`, `executor_cpu_time_zing`
 
-The resulting CSV schema is `query,total_time_correto,total_time_zing,[...]`, (aggregation+comparison of each query for the two configurations) and can be plotted/used separately.
-
-Additonally, e.g. `--longer-than 60` can be used to consider only queries where target configuration runs longer than 60 seconds.
+The CSV contains aggregated per-query metrics for both configurations and can be used for further analysis or custom plotting.
