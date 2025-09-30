@@ -364,3 +364,43 @@ spark.sql.codegen.useIdInClassName: false
 # The global cache of generated classes defaults to 100 entries once you exceed that, Spark evicts and recompiles classes, wasting CPU and lengthening query latency
 spark.sql.codegen.cache.maxEntries: 9999
 ```
+
+## Evaluating results
+
+For evaluating results, we will use the data from Spark Event Logs. If `spark.eventLog.dir` is not set, to get AWS EMR Spark Event Logs:
+
+1. In AWS EMR Web UI go to the cluster where the benchmark ran.
+2. Start the Spark History UI by clicking on `Spark History Server`.
+3. Wait for the Spark History UI to open, and wait until the Spark Event Logs from the benchmark runs are available (check by refreshing the page), and download them as `.zip` files.
+
+For each event log (JSON, optionally in `.zip` or `.gz`), convert it to more lightweight aggregated CSV:
+
+```bash
+python spark_eventlog_analyze.py -o zing-1.csv /path/to/eventLogs-application_1758748016442_0001-1.zip
+python spark_eventlog_analyze.py -o zing-2.csv /path/to/eventLogs-application_1758748016442_0002-1.zip
+[...]
+python spark_eventlog_analyze.py -o correto-1.csv /path/to/eventLogs-application_1756681602934_0001-1.zip
+[...]
+```
+
+Then compare the converted event logs of two configurations, e.g.:
+
+```bash
+python tpcds_eventlog_compare.py -o results correto-*.csv zing-*.csv
+```
+
+Configuration names (e.g. corretto, zing) as well as run sequence numbers are implicitly derived from CSV file names. The first named configuration is taken as baseline.
+
+The result folder will look something like this:
+
+```
+results
+├── zing-vs-correto.csv
+└── zing-vs-correto-total_time.png
+```
+
+The PNG file is S-curve comparison of the the `total_time` metric (time to complete each query).
+
+The resulting CSV schema is `query,total_time_correto,total_time_zing,[...]`, (aggregation+comparison of each query for the two configurations) and can be plotted/used separately.
+
+Additonally, e.g. `--longer-than 60` can be used to consider only queries where target configuration runs longer than 60 seconds.
