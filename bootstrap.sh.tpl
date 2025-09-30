@@ -25,9 +25,25 @@ echo defer | sudo tee /sys/kernel/mm/transparent_hugepage/defrag
 echo 1 | sudo tee /sys/kernel/mm/transparent_hugepage/khugepaged/defrag
 
 sudo mkdir -p /mnt/vmoutput
-# Add any additional files you need to download here
-# Example:
-# sudo curl -L -f --connect-timeout 30 --max-time 300 -o /mnt/vmoutput/your-file.profile https://your-repository.com/path/to/your-file.profile
+
+# ReadyNow Profile Download (Azul Zing only)
+# Uncomment the appropriate section based on your training generation:
+
+# For Generation 1 training (after Gen0 collection):
+# Download Gen0 profile from S3
+# sudo curl -L -f --connect-timeout 30 --max-time 300 \
+#   -o /mnt/vmoutput/tpcds-15tb-full-gen0.profile \
+#   https://s3.amazonaws.com/your-bucket/readynow-profiles/tpcds-15tb-full-gen0.profile
+
+# For Production runs (after Gen1 collection):
+# Download Gen1 profile from S3
+# sudo curl -L -f --connect-timeout 30 --max-time 300 \
+#   -o /mnt/vmoutput/tpcds-15tb-full-gen1.profile \
+#   https://s3.amazonaws.com/your-bucket/readynow-profiles/tpcds-15tb-full-gen1.profile
+
+# Verify download (optional but recommended)
+# ls -lh /mnt/vmoutput/*.profile
+
 sudo chmod -R 1777 /mnt/vmoutput
 
 sudo dnf install htop -y
