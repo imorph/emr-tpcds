@@ -18,11 +18,12 @@ INPUT_PATH="s3://${S3_BUCKET}/data/sf15000-parquet"
 OUTPUT_PATH="s3://${S3_BUCKET}/logs/TEST-15TB-RESULT"
 
 
-CURR_OPT_CONF="-XX:TopTierCompileThresholdTriggerMillis=60000 -XX:ActiveProcessorCount=8"
-# first Ready Now pass
-# CURR_OPT_CONF="-XX:TopTierCompileThresholdTriggerMillis=60000 -XX:ActiveProcessorCount=8 -XX:ProfileLogOut=/mnt/vmoutput/first-run.log"
-# Second Ready Now pass
-# CURR_OPT_CONF="-XX:TopTierCompileThresholdTriggerMillis=60000 -XX:ActiveProcessorCount=8 -XX:ProfileLogIn=/mnt/vmoutput/first-run.log -XX:ProfileLogOut=/mnt/vmoutput/second-run.log"
+# Generate first generation ReadyNow profile
+#CURR_OPT_CONF="-XX:TopTierCompileThresholdTriggerMillis=60000 -XX:ActiveProcessorCount=8 -XX:ProfileLogOut=/mnt/vmoutput/tpcds-15tb-full-gen0-%p.profile"
+# Generate second generation ReadyNow profile
+#CURR_OPT_CONF="-XX:TopTierCompileThresholdTriggerMillis=60000 -XX:ActiveProcessorCount=8 -XX:ProfileLogIn=/mnt/vmoutput/tpcds-15tb-full-gen0.profile -XX:ProfileLogOut=/mnt/vmoutput/tpcds-15tb-full-gen1-%p.profile"
+# Measured run with second generation ReadyNow profile
+CURR_OPT_CONF="-XX:TopTierCompileThresholdTriggerMillis=60000 -XX:ActiveProcessorCount=8 -XX:ProfileLogIn=/mnt/vmoutput/tpcds-15tb-full-gen1.profile"
 
 ITERATIONS="3"
 
